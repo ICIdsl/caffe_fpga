@@ -462,6 +462,18 @@ void Blob<Dtype>::CopyFrom(const Blob& source, bool copy_diff, bool reshape) {
   }
 }
 
+
+template <typename Dtype>
+int Blob<Dtype>::getSf(){
+    return sf_;
+}
+
+template <typename Dtype>
+void Blob<Dtype>::setSf(int sf){
+    sf_ = sf;
+}
+
+
 template <typename Dtype>
 void Blob<Dtype>::FromProto(const BlobProto& proto, bool reshape) {
   if (reshape) {

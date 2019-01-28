@@ -194,8 +194,16 @@ int train() {
   vector<int> gpus;
   get_gpus(&gpus);
   if (gpus.size() == 0) {
-    LOG(INFO) << "Use CPU.";
-    Caffe::set_mode(Caffe::CPU);
+    if (solver_param.solver_mode() == Caffe::CPU)
+    {
+      LOG(INFO) << "Use CPU";
+      Caffe::set_mode(Caffe::CPU);
+    }
+    else if (solver_param.solver_mode() == Caffe::FPGA)
+    {
+      LOG(INFO) << "Use FPGA";
+      Caffe::set_mode(Caffe::FPGA);
+    }
   } else {
     ostringstream s;
     for (int i = 0; i < gpus.size(); ++i) {

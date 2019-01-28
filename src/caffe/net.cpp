@@ -932,6 +932,10 @@ void Net<Dtype>::ClearParamDiffs() {
       caffe_set(blob->count(), static_cast<Dtype>(0),
                 blob->mutable_cpu_diff());
       break;
+    case Caffe::FPGA:
+      caffe_set(blob->count(), static_cast<Dtype>(0),
+                blob->mutable_cpu_diff());
+      break;
     case Caffe::GPU:
 #ifndef CPU_ONLY
       caffe_gpu_set(blob->count(), static_cast<Dtype>(0),

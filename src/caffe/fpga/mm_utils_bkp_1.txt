@@ -1,0 +1,425 @@
+#include "caffe/fpga/mm_utils.hpp"
+
+void tile_a(
+    const float* inMem,
+    const int* params,
+    const int transposeMat, 
+    const int transposeTiles, 
+    float* buffer
+)
+{
+    int tileBound1 = params[0]; 
+    int tileBound2 = params[1]; 
+    int iterBound1 = params[2]; 
+    int iterBound2 = params[3]; 
+    int tR = params[4]; 
+    int tC = params[5]; 
+    int rows = params[6]; 
+    int cols = params[7]; 
+
+    // std::cout << "In tmp : " << std::endl; 
+    // std::cout << "tileBound1 " << tileBound1 << std::endl; 
+    // std::cout << "tileBound2 " << tileBound2 << std::endl; 
+    // std::cout << "iterBound1 " << iterBound1 << std::endl; 
+    // std::cout << "iterBound2 " << iterBound2 << std::endl; 
+    // std::cout << "tR " << tR << std::endl; 
+    // std::cout << "tC " << tC << std::endl; 
+    // std::cout << "rows " << rows << std::endl; 
+    // std::cout << "cols " << cols << std::endl; 
+    
+    float val; 
+    int tileIter1, tileIter2, iter1, iter2, flatIndex, rowIdx, colIdx; 
+
+    int *row = (transposeMat == 1) ? &iter2 : &iter1; 
+    int *col = (transposeMat == 1) ? &iter1 : &iter2; 
+    int *tileRowIndex = (transposeTiles == 1) ? &tileIter2 : &tileIter1; 
+    int *tileColIndex = (transposeTiles == 1) ? &tileIter1 : &tileIter2; 
+
+    for (tileIter1 = 0; tileIter1 < tileBound1; tileIter1 ++)
+    {
+        for (tileIter2 = 0; tileIter2 < tileBound2; tileIter2++)
+        {
+            flatIndex = 0; 
+            for (iter1 = 0; iter1 < iterBound1; iter1++)
+            {
+                for (iter2 = 0; iter2 < iterBound2; iter2++)
+                {
+                    rowIdx = *(row) + *(tileRowIndex) * tR; 
+                    colIdx = *(col) + *(tileColIndex) * tC; 
+                    if (rowIdx >= rows || colIdx >= cols)
+                    {
+                        val = 0;      
+                    }
+                    else 
+                    {
+                        val = inMem[rowIdx*cols + colIdx]; 
+                    }
+                    buffer[flatIndex] = val; 
+                    flatIndex ++; 
+                }
+            }
+        }
+    }
+}
+
+void TransformToFlattenTiledLayout_vec_new(
+    const float *inputMat, 
+    std::vector<std::vector<float, aligned_allocator<float> > > &tiledFlatMat, 
+    int ROWS, 
+    int COLS, 
+    int tR, 
+    int tC, 
+    bool transposeTiles, 
+    bool transposeMat
+)
+{
+    int tileIter1, tileIter2, iter1, iter2, rowIdx, colIdx; 
+    int rowTilesTotal = ceil((float) ROWS / (float) tR);
+	int colTilesTotal = ceil((float) COLS / (float) tC);
+
+    int iterBound1 = tR; 
+    int iterBound2 = tC; 
+    int *row = &iter1; 
+    int *col = &iter2; 
+    if (transposeMat)
+    {
+        int tmp = tR; 
+        tR = tC; 
+        tC = tmp; 
+
+        tmp = COLS; 
+        COLS = ROWS; 
+        ROWS = tmp; 
+        
+        tmp = colTilesTotal; 
+        colTilesTotal = rowTilesTotal; 
+        rowTilesTotal = tmp; 
+
+        row = &iter2; 
+        col = &iter1; 
+
+        transposeTiles = !transposeTiles; 
+    }
+    
+    // int rowTilesTotal = ceil((float) ROWS / (float) tR);
+	// int colTilesTotal = ceil((float) COLS / (float) tC);
+
+    int tileBound1 = rowTilesTotal; 
+    int tileBound2 = colTilesTotal; 
+    int *tileRowIndex = &tileIter1; 
+    int *tileColIndex = &tileIter2; 
+    if (transposeTiles)
+    {
+        tileBound1 = colTilesTotal; 
+        tileBound2 = rowTilesTotal; 
+
+        tileRowIndex = &tileIter2; 
+        tileColIndex = &tileIter1; 
+    }
+    
+    // std::cout << "In correct : " << std::endl; 
+    // std::cout << "tileBound1 " << tileBound1 << std::endl; 
+    // std::cout << "tileBound2 " << tileBound2 << std::endl; 
+    // std::cout << "iterBound1 " << iterBound1 << std::endl; 
+    // std::cout << "iterBound2 " << iterBound2 << std::endl; 
+    // std::cout << "tR " << tR << std::endl; 
+    // std::cout << "tC " << tC << std::endl; 
+    // std::cout << "rows " << ROWS << std::endl; 
+    // std::cout << "cols " << COLS << std::endl; 
+        
+    int flatIndex = 0;
+    float val; 
+    for (tileIter1 = 0; tileIter1 < tileBound1; tileIter1 ++)
+    {
+        for (tileIter2 = 0; tileIter2 < tileBound2; tileIter2++)
+        {
+            for (iter1 = 0; iter1 < iterBound1; iter1++)
+            {
+                for (iter2 = 0; iter2 < iterBound2; iter2++)
+                {
+                    rowIdx = *(row) + *(tileRowIndex) * tR; 
+                    colIdx = *(col) + *(tileColIndex) * tC; 
+                    if (rowIdx >= ROWS || colIdx >= COLS)
+                    {
+                        val = 0;      
+                    }
+                    else 
+                    {
+                        val = inputMat[rowIdx*COLS + colIdx]; 
+                    }
+                    tiledFlatMat[flatIndex].push_back(val); 
+					// tiledFlatMat[flatIndex] = val;
+					// flatIndex = flatIndex + 1;
+                }
+            }
+            flatIndex ++; 
+        }
+    }
+}
+
+void TransformToFlattenTiledLayout_vec_tmp(
+    const float *inputMat, 
+    float *buffer,
+    int ROWS, 
+    int COLS, 
+    int tR, 
+    int tC, 
+    bool transposeTiles, 
+    bool transposeMat
+)
+{
+    int tileIter1, tileIter2, iter1, iter2, rowIdx, colIdx; 
+    int rowTilesTotal = ceil((float) ROWS / (float) tR);
+	int colTilesTotal = ceil((float) COLS / (float) tC);
+
+    int iterBound1 = tR; 
+    int iterBound2 = tC; 
+    int *row = &iter1; 
+    int *col = &iter2; 
+    if (transposeMat)
+    {
+        int tmp = tR; 
+        tR = tC; 
+        tC = tmp; 
+
+        tmp = COLS; 
+        COLS = ROWS; 
+        ROWS = tmp; 
+        
+        tmp = colTilesTotal; 
+        colTilesTotal = rowTilesTotal; 
+        rowTilesTotal = tmp; 
+
+        row = &iter2; 
+        col = &iter1; 
+
+        transposeTiles = !transposeTiles; 
+    }
+    
+    // int rowTilesTotal = ceil((float) ROWS / (float) tR);
+	// int colTilesTotal = ceil((float) COLS / (float) tC);
+
+    int tileBound1 = rowTilesTotal; 
+    int tileBound2 = colTilesTotal; 
+    int *tileRowIndex = &tileIter1; 
+    int *tileColIndex = &tileIter2; 
+    if (transposeTiles)
+    {
+        tileBound1 = colTilesTotal; 
+        tileBound2 = rowTilesTotal; 
+
+        tileRowIndex = &tileIter2; 
+        tileColIndex = &tileIter1; 
+    }
+
+    int params[8]; 
+    params[0] = tileBound1; 
+    params[1] = tileBound2; 
+    params[2] = iterBound1; 
+    params[3] = iterBound2; 
+    params[4] = tR; 
+    params[5] = tC; 
+    params[6] = ROWS; 
+    params[7] = COLS; 
+
+    tile_a(
+        inputMat, 
+        params, 
+        transposeMat, 
+        transposeTiles, 
+        buffer
+    ); 
+}
+
+void TransformToFlattenTiledLayout_vec(
+    const float *inputMat, 
+    std::vector<float, aligned_allocator<float>> &tiledFlatMat, 
+    int ROWS, 
+    int COLS, 
+    int tR, 
+    int tC, 
+    bool transposeTiles, 
+    bool transposeMat
+)
+{
+    int tileIter1, tileIter2, iter1, iter2, rowIdx, colIdx; 
+
+    int iterBound1 = tR; 
+    int iterBound2 = tC; 
+    int *row = &iter1; 
+    int *col = &iter2; 
+	
+    if (transposeMat)
+    {
+        int tmp = tR; 
+        tR = tC; 
+        tC = tmp; 
+
+        row = &iter2; 
+        col = &iter1; 
+
+        transposeTiles = !transposeTiles; 
+    }
+    
+    int rowTilesTotal = ceil((float) ROWS / (float) tR);
+	int colTilesTotal = ceil((float) COLS / (float) tC);
+
+	int flatIndex = 0;
+    float val; 
+
+    int tileBound1 = rowTilesTotal; 
+    int tileBound2 = colTilesTotal; 
+    int *tileRowIndex = &tileIter1; 
+    int *tileColIndex = &tileIter2; 
+    if (transposeTiles)
+    {
+        tileBound1 = colTilesTotal; 
+        tileBound2 = rowTilesTotal; 
+
+        tileRowIndex = &tileIter2; 
+        tileColIndex = &tileIter1; 
+    }
+
+    // std::cout << tileBound1 << ", " << tileBound2 << std::endl; 
+    for (tileIter1 = 0; tileIter1 < tileBound1; tileIter1 ++)
+    {
+        for (tileIter2 = 0; tileIter2 < tileBound2; tileIter2++)
+        {
+            for (iter1 = 0; iter1 < iterBound1; iter1++)
+            {
+                for (iter2 = 0; iter2 < iterBound2; iter2++)
+                {
+                    rowIdx = *(row) + *(tileRowIndex) * tR; 
+                    colIdx = *(col) + *(tileColIndex) * tC; 
+                    if (rowIdx >= ROWS || colIdx >= COLS)
+                    {
+                        val = 0;      
+                    }
+                    else 
+                    {
+                        val = inputMat[rowIdx*COLS + colIdx]; 
+                    }
+					tiledFlatMat[flatIndex] = val;
+					flatIndex = flatIndex + 1;
+
+                }
+            }
+        }
+    }
+}
+
+void TransformToMatrixLayoutFunc_vec_new(
+		std::vector<std::vector<float, aligned_allocator<float>>> &tiledFlatMat,
+		float *outputMat,
+		int TR,
+		int TC,
+        int ROWS, 
+        int COLS,
+        bool transposed
+)
+{
+	int rowTilesTotal = ceil((float) ROWS / (float) TR);
+	int colTilesTotal = ceil((float) COLS / (float) TC);
+
+    int iter1, iter2, tileIter1, tileIter2, rowIdx, colIdx; 
+
+    int iterBound1 = TR; 
+    int iterBound2 = TC; 
+    int *row = &iter1; 
+    int *col = &iter2; 
+
+    int tileBound1 = rowTilesTotal; 
+    int tileBound2 = colTilesTotal; 
+    int *tileRowIndex = &tileIter1; 
+    int *tileColIndex = &tileIter2; 
+    if (transposed)
+    {
+        tileBound1 = colTilesTotal; 
+        tileBound2 = rowTilesTotal; 
+
+        tileRowIndex = &tileIter2; 
+        tileColIndex = &tileIter1; 
+    }
+
+	// int flatIndex = 0;
+	int tileIndex = 0;
+    int locIndex = 0; 
+    for (tileIter1 = 0; tileIter1 < tileBound1; tileIter1 ++)
+    {
+        for (tileIter2 = 0; tileIter2 < tileBound2; tileIter2 ++)
+        {
+            locIndex = 0; 
+            for (iter1 = 0; iter1 < iterBound1; iter1++)
+            {
+                for (iter2 = 0; iter2 <iterBound2; iter2++)
+                {
+                    rowIdx = *(row) + *(tileRowIndex) * TR; 
+                    colIdx = *(col) + *(tileColIndex) * TC; 
+                    if (rowIdx < ROWS && colIdx < COLS)
+                    {
+                        // outputMat[rowIdx * COLS + colIdx] = tiledFlatMat[flatIndex]; 
+                        outputMat[rowIdx * COLS + colIdx] = tiledFlatMat[tileIndex][locIndex]; 
+                    }
+                    locIndex++; 
+                    // flatIndex ++; 
+                }
+            }
+            tileIndex++;
+        }
+    }
+}
+
+void TransformToMatrixLayoutFunc_vec(
+		std::vector<float, aligned_allocator<float>> &tiledFlatMat,
+		float *outputMat,
+		int TR,
+		int TC,
+        int ROWS, 
+        int COLS,
+        bool transposed
+)
+{
+	int rowTilesTotal = ceil((float) ROWS / (float) TR);
+	int colTilesTotal = ceil((float) COLS / (float) TC);
+
+    int iter1, iter2, tileIter1, tileIter2, rowIdx, colIdx; 
+
+    int iterBound1 = TR; 
+    int iterBound2 = TC; 
+    int *row = &iter1; 
+    int *col = &iter2; 
+
+    int tileBound1 = rowTilesTotal; 
+    int tileBound2 = colTilesTotal; 
+    int *tileRowIndex = &tileIter1; 
+    int *tileColIndex = &tileIter2; 
+    if (transposed)
+    {
+        tileBound1 = colTilesTotal; 
+        tileBound2 = rowTilesTotal; 
+
+        tileRowIndex = &tileIter2; 
+        tileColIndex = &tileIter1; 
+    }
+
+	int flatIndex = 0;
+    for (tileIter1 = 0; tileIter1 < tileBound1; tileIter1 ++)
+    {
+        for (tileIter2 = 0; tileIter2 < tileBound2; tileIter2 ++)
+        {
+            for (iter1 = 0; iter1 < iterBound1; iter1++)
+            {
+                for (iter2 = 0; iter2 <iterBound2; iter2++)
+                {
+                    rowIdx = *(row) + *(tileRowIndex) * TR; 
+                    colIdx = *(col) + *(tileColIndex) * TC; 
+                    if (rowIdx < ROWS && colIdx < COLS)
+                    {
+                        outputMat[rowIdx * COLS + colIdx] = tiledFlatMat[flatIndex]; 
+                    }
+                    flatIndex ++; 
+                }
+            }
+        }
+    }
+}

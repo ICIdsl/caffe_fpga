@@ -6,18 +6,80 @@
 #include "caffe/common.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
+#include "caffe/fpga/mm_fpga.hpp"
+
+std::ofstream profilingLog; 
+int globalCount = 0; 
+int globalPrevSize[3];
+caffe::Timer globalGemmTimer; 
+double globalGemmTime = 0.0; 
 
 namespace caffe {
 
 template<>
-void caffe_cpu_gemm<float>(const CBLAS_TRANSPOSE TransA,
+void caffe_cpu_gemm<float>(const CBLAS_TRANSPOSE TransA, 
+    const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K, 
+    const float alpha, const float* A, const float* B, const float beta, 
+    float* C) 
+{
+    int lda = (TransA == CblasNoTrans) ? K : M;
+    int ldb = (TransB == CblasNoTrans) ? N : K;
+    cblas_sgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, N);
+}
+
+template<>
+void caffe_fpga_gemm<float>(const CBLAS_TRANSPOSE TransA,
     const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
     const float alpha, const float* A, const float* B, const float beta,
-    float* C) {
-  int lda = (TransA == CblasNoTrans) ? K : M;
-  int ldb = (TransB == CblasNoTrans) ? N : K;
-  cblas_sgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B,
-      ldb, beta, C, N);
+    float* C) 
+{
+    if (K == 1)
+    {
+        int lda = (TransA == CblasNoTrans) ? K : M;
+        int ldb = (TransB == CblasNoTrans) ? N : K;
+        cblas_sgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, N);
+    }
+    else 
+    {
+        std::cout << M << "," << N << "," << K << std::endl; 
+        Kernel(TransA - 111, A, TransB - 111, B, C, M, K, K, N, alpha, beta);
+    }
+
+    std::cout << "K: " << K << std::endl;
+    if (K != 1)
+    {
+        std::cout << "TransA = " << TransA << std::endl; 
+        std::cout << "TransB = " << TransB << std::endl; 
+        int lda = (TransA == CblasNoTrans) ? K : M;
+        int ldb = (TransB == CblasNoTrans) ? N : K;
+        cblas_sgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, N);
+        
+        float cBlas[N*M]; 
+        for (int i=0; i<M; i++)
+        {
+            for (int j=0; j<N; j++)
+            {
+                cBlas[i*N + j] = C[i*N+j]; 
+            }
+        }
+        std::cout << std::endl; 
+        
+        Kernel(TransA - 111, A, TransB - 111, B, C, M, K, K, N, alpha, beta);
+        
+        double mse = 0; 
+        for (int i=0; i<M; i++)
+        {
+            for (int j=0; j<N; j++)
+            {
+	    	    mse += std::pow(std::fabs(cBlas[i*N+j] - C[i*N+j]) ,2);
+            }
+        }
+
+        std::cout << M << "," << N << "," << K << "," << TransA << "," << TransB << std::endl; 
+        std::cout << "mse = " << (mse / (N*M)) << std::endl; 
+        std::cout << std::endl; 
+        exit(EXIT_SUCCESS); 
+    }
 }
 
 template<>
@@ -29,6 +91,7 @@ void caffe_cpu_gemm<double>(const CBLAS_TRANSPOSE TransA,
   int ldb = (TransB == CblasNoTrans) ? N : K;
   cblas_dgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B,
       ldb, beta, C, N);
+  // Kernel(TransA, A, TransB, B, C, M, K, K, N, alpha, beta);
 }
 
 template <>

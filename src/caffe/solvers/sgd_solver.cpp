@@ -161,6 +161,7 @@ void SGDSolver<Dtype>::Regularize(int param_id) {
   string regularization_type = this->param_.regularization_type();
   Dtype local_decay = weight_decay * net_params_weight_decay[param_id];
   switch (Caffe::mode()) {
+  case Caffe::FPGA:
   case Caffe::CPU: {
     if (local_decay) {
       if (regularization_type == "L2") {
@@ -228,6 +229,7 @@ void SGDSolver<Dtype>::ComputeUpdateValue(int param_id, Dtype rate) {
   Dtype local_rate = rate * net_params_lr[param_id];
   // Compute the update to history, then copy it to the parameter diff.
   switch (Caffe::mode()) {
+  case Caffe::FPGA:
   case Caffe::CPU: {
     caffe_cpu_axpby(net_params[param_id]->count(), local_rate,
               net_params[param_id]->cpu_diff(), momentum,

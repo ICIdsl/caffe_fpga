@@ -266,6 +266,9 @@ class Blob {
 
   bool ShapeEquals(const BlobProto& other);
 
+  int getSf();
+  void setSf(int sf);
+
  protected:
   shared_ptr<SyncedMemory> data_;
   shared_ptr<SyncedMemory> diff_;
@@ -273,6 +276,8 @@ class Blob {
   vector<int> shape_;
   int count_;
   int capacity_;
+  // impelemnted scale factor
+  int sf_;
 
   DISABLE_COPY_AND_ASSIGN(Blob);
 };  // class Blob

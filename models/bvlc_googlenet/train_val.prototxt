@@ -15,8 +15,8 @@ layer {
     mean_value: 123
   }
   data_param {
-    source: "examples/imagenet/ilsvrc12_train_lmdb"
-    batch_size: 32
+    source: "../examples/images/cat.jpg"
+    batch_size: 1 
     backend: LMDB
   }
 }
@@ -36,7 +36,7 @@ layer {
     mean_value: 123
   }
   data_param {
-    source: "examples/imagenet/ilsvrc12_val_lmdb"
+    source: "../data/ilsvrc12/synset_words.txt"
     batch_size: 50
     backend: LMDB
   }

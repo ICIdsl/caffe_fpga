@@ -108,7 +108,7 @@ class Caffe {
   // on OSX. Also fails on Linux with CUDA 7.0.18.
   static Caffe& Get();
 
-  enum Brew { CPU, GPU };
+  enum Brew { CPU, GPU, FPGA };
 
   // This random number generator facade hides boost and CUDA rng
   // implementation from one another (for cross-platform compatibility).
@@ -138,7 +138,7 @@ class Caffe {
   }
 #endif
 
-  // Returns the mode: running on CPU or GPU.
+  // Returns the mode: running on CPU, GPU or FPGA
   inline static Brew mode() { return Get().mode_; }
   // The setters for the variables
   // Sets the mode. It is recommended that you don't change the mode halfway

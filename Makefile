@@ -7,6 +7,12 @@ $(error $(CONFIG_FILE) not found. See $(CONFIG_FILE).example.)
 endif
 include $(CONFIG_FILE)
 
+COMMON_REPO = /home/centos/src/project_data/aws-fpga/SDAccel/examples/xilinx
+ABS_COMMON_REPO = $(shell readlink -f $(COMMON_REPO))
+include $(ABS_COMMON_REPO)/libs/opencl/opencl.mk
+include $(ABS_COMMON_REPO)/libs/opencv/opencv.mk
+include $(ABS_COMMON_REPO)/libs/xcl2/xcl2.mk
+
 BUILD_DIR_LINK := $(BUILD_DIR)
 ifeq ($(RELEASE_BUILD_DIR),)
 	RELEASE_BUILD_DIR := .$(BUILD_DIR)_release
@@ -46,6 +52,7 @@ COMMON_FLAGS += -DCAFFE_VERSION=$(DYNAMIC_VERSION_MAJOR).$(DYNAMIC_VERSION_MINOR
 ##############################
 # CXX_SRCS are the source files excluding the test ones.
 CXX_SRCS := $(shell find src/$(PROJECT) ! -name "test_*.cpp" -name "*.cpp")
+# CXX_SRCS += $(opencv_SRCS) $(xcl2_SRCS) 
 # CU_SRCS are the cuda source files
 CU_SRCS := $(shell find src/$(PROJECT) ! -name "test_*.cu" -name "*.cu")
 # TEST_SRCS are the test source files
@@ -198,15 +205,55 @@ ifeq ($(USE_HDF5), 1)
 	LIBRARIES += hdf5_hl hdf5
 endif
 ifeq ($(USE_OPENCV), 1)
-	LIBRARIES += opencv_core opencv_highgui opencv_imgproc
+	LIBRARIES += opencv_core opencv_highgui opencv_imgproc xml2
 
 	ifeq ($(OPENCV_VERSION), 3)
 		LIBRARIES += opencv_imgcodecs
 	endif
 
 endif
+# LIBRARIES += OpenCL rt pthread
 PYTHON_LIBRARIES ?= boost_python python2.7
-WARNINGS := -Wall -Wno-sign-compare
+# WARNINGS := -w -Wall -Wno-sign-compare
+WARNINGS := -w -Wno-sign-compare
+
+
+#################################
+# OpenCL include and library 
+#################################
+# OCL_INCLUDE_DIR := $(OCL_DIR)/include
+# CLBLAS_INCLUDE_DIR := ${CLBLAS_DIR}/include
+# 
+# OCL_LIB_DIR := 
+# CLBLAS_LIB_DIR :=
+# # add <OCL>/lib/x86_64 only if it exists
+# ifneq ("$(wildcard $(OCL_LIB_DIR)/lib/x86_64)","")
+# 	OCL_LIB_DIR += $(OCL_DIR)/lib/x86_64
+# endif
+# OCL_LIB_DIR += $(OCL_DIR)/lib/x86
+# 
+# # add <CLBLAS_DIR>/lib/ only if it exists
+# ifneq ("$(wildcard $(CLBLAS_DIR)/lib)","")
+# 	CLBLAS_LIB_DIR += $(CLBLAS_LIB_DIR)/lib
+# endif
+# 
+# # add <CLBLAS_DIR>/lib64/ only if it exists
+# ifneq ("$(wildcard $(CLBLAS_DIR)/lib64)","")
+# 	CLBLAS_LIB_DIR += $(CLBLAS_LIB_DIR)/lib64
+# endif
+# 
+# INCLUDE_DIRS += $(BUILD_INCLUDE_DIR) ./src ./include
+# ifneq ($(CPU_ONLY), 1)
+# 	INCLUDE_DIRS += $(OCL_INCLUDE_DIR) + $(CLBLAS_INCLUDE_DIR)
+#     LIBRARY_DIRS += $(OCL_LIB_DIR) + $(CLBLAS_LIB_DIR)
+#     LIBRARIES += OpenCL clBLAS
+# endif
+# LIBRARIES += glog gflags protobuf leveldb snappy \
+# 	lmdb boost_system hdf5_hl hdf5 m \
+# 	opencv_core opencv_highgui opencv_imgproc
+# PYTHON_LIBRARIES := boost_python python2.7
+# WARNINGS := -Wall -Wno-sign-compare
+
 
 ##############################
 # Set build directories
@@ -315,6 +362,10 @@ ifneq (,$(findstring clang++,$(CXX)))
 	STATIC_LINK_COMMAND := -Wl,-force_load $(STATIC_NAME)
 else ifneq (,$(findstring g++,$(CXX)))
 	STATIC_LINK_COMMAND := -Wl,--whole-archive $(STATIC_NAME) -Wl,--no-whole-archive
+# by my
+else ifneq (,$(findstring xcpp,$(CXX)))
+	STATIC_LINK_COMMAND := -Wl,--whole-archive $(STATIC_NAME) -Wl,--no-whole-archive
+  #$(error $(STATIC_LINK_COMMAND))
 else
   # The following line must not be indented with a tab, since we are not inside a target
   $(error Cannot static link with the $(CXX) compiler)
@@ -421,12 +472,12 @@ CXXFLAGS += -MMD -MP
 
 # Complete build flags.
 COMMON_FLAGS += $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir))
+COMMON_FLAGS += $(xcl2_CXXFLAGS) $(opencv_CXXFLAGS) $(opencl_CXXFLAGS)
 CXXFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
 NVCCFLAGS += -ccbin=$(CXX) -Xcompiler -fPIC $(COMMON_FLAGS)
 # mex may invoke an older gcc that is too liberal with -Wuninitalized
 MATLAB_CXXFLAGS := $(CXXFLAGS) -Wno-uninitialized
-LINKFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
-
+LINKFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS) 
 USE_PKG_CONFIG ?= 0
 ifeq ($(USE_PKG_CONFIG), 1)
 	PKG_CONFIG := $(shell pkg-config opencv --libs)
@@ -434,7 +485,10 @@ else
 	PKG_CONFIG :=
 endif
 LDFLAGS += $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) $(PKG_CONFIG) \
-		$(foreach library,$(LIBRARIES),-l$(library))
+		$(foreach library,$(LIBRARIES),-l$(library)) \
+		$(opencv_LDFLAGS) $(xcl2_LDFLAGS) $(opencl_LDFLAGS) \
+		-L$(XILINX_SDX)/runtime/lib/x86_64
+
 PYTHON_LDFLAGS := $(LDFLAGS) $(foreach library,$(PYTHON_LIBRARIES),-l$(library))
 
 # 'superclean' target recursively* deletes all files ending with an extension
@@ -465,6 +519,7 @@ endif
 all: lib tools examples
 
 lib: $(STATIC_NAME) $(DYNAMIC_NAME)
+	@ echo "lib done"
 
 everything: $(EVERYTHING_TARGETS)
 
@@ -506,6 +561,7 @@ $(LINT_OUTPUTS): $(LINT_OUTPUT_DIR)/%.lint.txt : % $(LINT_SCRIPT) | $(LINT_OUTPU
 test: $(TEST_ALL_BIN) $(TEST_ALL_DYNLINK_BIN) $(TEST_BINS)
 
 tools: $(TOOL_BINS) $(TOOL_BIN_LINKS)
+	@ echo "tools done"
 
 examples: $(EXAMPLE_BINS)
 

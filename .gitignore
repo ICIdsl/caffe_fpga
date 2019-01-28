@@ -31,6 +31,7 @@
 
 # Editor temporaries
 *.swp
+*.swo
 *~
 
 # Sublime Text settings
@@ -97,3 +98,14 @@ LOCK
 LOG*
 CURRENT
 MANIFEST-*
+
+# fpga specific add on
+awsver.txt
+backup_proj/*
+legacy*
+xclbin/*
+test_data/*
+huawei_proj.zip
+huawei_proj/*
+test*.txt
+src/caffe/util/math_functions_bkup.txt
