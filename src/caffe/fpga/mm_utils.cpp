@@ -98,7 +98,6 @@ void TransformToMatrixLayoutFunc(
 		std::vector<float, aligned_allocator<float>> &tiledFlatMat,
 		float *outputMat,
 		// std::vector<int, aligned_allocator<int>> &tiledFlatMat,
-		// float *outputMat,
 		// int *outputMat,
 		int TR,
 		int TC,

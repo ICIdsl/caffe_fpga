@@ -437,6 +437,7 @@ inline Dtype Layer<Dtype>::Forward(const vector<Blob<Dtype>*>& bottom,
     }
     break;
   case Caffe::FPGA:
+    // LOG(INFO) << "Forward - layer name: " << layer_param_.name();
     Forward_fpga(bottom, top);
     for (int top_id = 0; top_id < top.size(); ++top_id) {
       if (!this->loss(top_id)) { continue; }
@@ -475,6 +476,7 @@ inline void Layer<Dtype>::Backward(const vector<Blob<Dtype>*>& top,
     Backward_cpu(top, propagate_down, bottom);
     break;
   case Caffe::FPGA:
+    // LOG(INFO) << "Backward - layer name: " << layer_param_.name();
     Backward_fpga(top, propagate_down, bottom);
     break;
   case Caffe::GPU:

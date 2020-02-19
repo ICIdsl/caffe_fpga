@@ -2,17 +2,12 @@
 #include <boost/random.hpp>
 
 #include <limits>
+#include <fstream>
 
 #include "caffe/common.hpp"
 #include "caffe/util/math_functions.hpp"
 #include "caffe/util/rng.hpp"
 #include "caffe/fpga/mm_fpga.hpp"
-
-std::ofstream profilingLog; 
-int globalCount = 0; 
-int globalPrevSize[3];
-caffe::Timer globalGemmTimer; 
-double globalGemmTime = 0.0; 
 
 namespace caffe {
 
@@ -33,53 +28,85 @@ void caffe_fpga_gemm<float>(const CBLAS_TRANSPOSE TransA,
     const float alpha, const float* A, const float* B, const float beta,
     float* C) 
 {
-    if (K == 1)
+    #ifdef PROFILING
+    std::ofstream profilingLog; 
+    profilingLog.open("/home/centos/src/project_data/caffe/huawei_proj/profile/log.csv", ios::app);
+
+    profilingLog << TILE_ROW << "," << TILE_COL << "," << TILE_COMMON << "," << M << "," << N << "," << K << ",";  
+    
+    int lda = (TransA == CblasNoTrans) ? K : M;
+    int ldb = (TransB == CblasNoTrans) ? N : K;
+    
+    caffe::Timer cpu; 
+    double cpu_time = 0.0; 
+    cpu.Start(); 
+    
+    cblas_sgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, N);
+    
+    cpu_time += cpu.MicroSeconds(); 
+    profilingLog << cpu_time / 1000.0 << ","; 
+    
+    float cBlas[N*M]; 
+    for (int i=0; i<M; i++)
     {
+        for (int j=0; j<N; j++)
+        {
+            cBlas[i*N + j] = C[i*N+j]; 
+        }
+    }
+    #endif
+    
+    double fpga_times[4]; 
+    
+    #ifdef SIMULATE_BATCHING
+    Kernel_profiling(TransA - 111, A, TransB - 111, B, C, M, K, K, N, alpha, beta);
+    exit(EXIT_SUCCESS);
+    #else 
+    
+    Kernel(TransA - 111, A, TransB - 111, B, C, M, K, K, N, alpha, beta, fpga_times);
+    // Kernel_double_buff(TransA - 111, A, TransB - 111, B, C, M, K, K, N, alpha, beta, fpga_times);
+    // Kernel_tiling(TransA - 111, A, TransB - 111, B, C, M, K, K, N, alpha, beta, fpga_times);
+    // Kernel_double_ddr(TransA - 111, A, TransB - 111, B, C, M, K, K, N, alpha, beta, fpga_times);
+    
+    #endif
+    
+    #ifdef PROFILING
+    
+    #ifdef PROFILING_TIME
+    double total_time = 0.0; 
+    for (unsigned i=0; i<4; i++)
+    {
+        total_time += fpga_times[i]; 
+    }
+    profilingLog << fpga_times[0] << "," << fpga_times[1] << "," << fpga_times[2] << "," << fpga_times[3] << "," << total_time << ","; 
+    #endif
+    
+    double mse = 0; 
+    for (int i=0; i<M; i++)
+    {
+        for (int j=0; j<N; j++)
+        {
+    	    mse += std::pow(std::fabs(cBlas[i*N+j] - C[i*N+j]) ,2);
+        }
+    }
+    mse /= (N*M); 
+    
+    profilingLog << mse << std::endl; 
+    // LOG(INFO) << "MSE = " << mse; 
+    
+    profilingLog.close();
+    #endif
+}
+
+template<>
+void caffe_fpga_gemm<double>(const CBLAS_TRANSPOSE TransA,
+    const CBLAS_TRANSPOSE TransB, const int M, const int N, const int K,
+    const double alpha, const double* A, const double* B, const double beta,
+    double* C) 
+{
         int lda = (TransA == CblasNoTrans) ? K : M;
         int ldb = (TransB == CblasNoTrans) ? N : K;
-        cblas_sgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, N);
-    }
-    else 
-    {
-        std::cout << M << "," << N << "," << K << std::endl; 
-        Kernel(TransA - 111, A, TransB - 111, B, C, M, K, K, N, alpha, beta);
-    }
-
-    std::cout << "K: " << K << std::endl;
-    if (K != 1)
-    {
-        std::cout << "TransA = " << TransA << std::endl; 
-        std::cout << "TransB = " << TransB << std::endl; 
-        int lda = (TransA == CblasNoTrans) ? K : M;
-        int ldb = (TransB == CblasNoTrans) ? N : K;
-        cblas_sgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, N);
-        
-        float cBlas[N*M]; 
-        for (int i=0; i<M; i++)
-        {
-            for (int j=0; j<N; j++)
-            {
-                cBlas[i*N + j] = C[i*N+j]; 
-            }
-        }
-        std::cout << std::endl; 
-        
-        Kernel(TransA - 111, A, TransB - 111, B, C, M, K, K, N, alpha, beta);
-        
-        double mse = 0; 
-        for (int i=0; i<M; i++)
-        {
-            for (int j=0; j<N; j++)
-            {
-	    	    mse += std::pow(std::fabs(cBlas[i*N+j] - C[i*N+j]) ,2);
-            }
-        }
-
-        std::cout << M << "," << N << "," << K << "," << TransA << "," << TransB << std::endl; 
-        std::cout << "mse = " << (mse / (N*M)) << std::endl; 
-        std::cout << std::endl; 
-        exit(EXIT_SUCCESS); 
-    }
+        cblas_dgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B, ldb, beta, C, N);
 }
 
 template<>
@@ -91,7 +118,6 @@ void caffe_cpu_gemm<double>(const CBLAS_TRANSPOSE TransA,
   int ldb = (TransB == CblasNoTrans) ? N : K;
   cblas_dgemm(CblasRowMajor, TransA, TransB, M, N, K, alpha, A, lda, B,
       ldb, beta, C, N);
-  // Kernel(TransA, A, TransB, B, C, M, K, K, N, alpha, beta);
 }
 
 template <>

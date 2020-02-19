@@ -1,0 +1,20 @@
+net: "models/resnet-20/trainval.prototxt"
+
+max_iter: 782
+display: 2
+momentum: 0.9
+weight_decay: 0.0001
+
+test_iter: 10
+test_interval: 391
+
+lr_policy: "step"
+base_lr: 0.1
+gamma: 0.1
+stepsize: 19550
+
+snapshot: 9775
+snapshot_prefix: "models/resnet-20/train_cifar10"
+
+type: "SGD"
+solver_mode: FPGA

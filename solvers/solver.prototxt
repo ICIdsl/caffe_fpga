@@ -1,20 +1,20 @@
-net: "../models/bvlc_alexnet/alexnet_cifar10_train.prototxt"
+net: "models/bvlc_alexnet/alexnet_cifar10_train.prototxt"
 
-max_iter: 1
+max_iter: 58650
 display: 1
 momentum: 0.9
-weight_decay: 0.0005
+weight_decay: 0.0001
 
-test_iter: 10
-test_interval: 391
+test_iter: 2 
+test_interval: 10
 
 lr_policy: "step"
-base_lr: 0.01
+base_lr: 0.0001
 gamma: 0.1
 stepsize: 19550
 
-snapshot: 9775
-snapshot_prefix: "../models/bvlc_alexnet/caffe_alexnet_train"
+snapshot: 1
+snapshot_prefix: "checkpoints/bvlc_alexnet/fpga"
 
 type: "SGD"
 solver_mode: FPGA

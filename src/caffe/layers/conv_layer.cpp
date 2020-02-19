@@ -1,4 +1,5 @@
 #include <vector>
+#include <iostream>
 
 #include "caffe/layers/conv_layer.hpp"
 
@@ -77,9 +78,11 @@ template <typename Dtype>
 void ConvolutionLayer<Dtype>::Forward_fpga(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   const Dtype* weight = this->blobs_[0]->cpu_data();
+  // std::cout << "size_forward: (" << this->blobs_[0]->shape(0) /*<< "," << layers_[i]->blobs()[0]->shape(1) << "," << layers_[i]->blobs()[0]->shape(2)*/ << ")" << std::endl; 
   for (int i = 0; i < bottom.size(); ++i) {
     const Dtype* bottom_data = bottom[i]->cpu_data();
     Dtype* top_data = top[i]->mutable_cpu_data();
+    // this loops over batches
     for (int n = 0; n < this->num_; ++n) {
       this->forward_fpga_gemm(bottom_data + n * this->bottom_dim_, weight,
           top_data + n * this->top_dim_);
@@ -110,10 +113,12 @@ void ConvolutionLayer<Dtype>::Backward_fpga(const vector<Blob<Dtype>*>& top,
     if (this->param_propagate_down_[0] || propagate_down[i]) {
       for (int n = 0; n < this->num_; ++n) {
         // gradient w.r.t. weight. Note that we will accumulate diffs.
+        // LOG(INFO) << "Backprop: weight gemm: " << n << "/" << this->num_;
         if (this->param_propagate_down_[0]) {
           this->weight_fpga_gemm(bottom_data + n * this->bottom_dim_,
               top_diff + n * this->top_dim_, weight_diff);
         }
+        // LOG(INFO) << "Backprop: backward gemm: " << n << "/" << this->num_;
         // gradient w.r.t. bottom data, if necessary.
         if (propagate_down[i]) {
           this->backward_fpga_gemm(top_diff + n * this->top_dim_, weight,

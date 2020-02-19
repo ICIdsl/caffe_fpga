@@ -227,12 +227,25 @@ void Solver<Dtype>::Step(int iters) {
     net_->set_debug_info(display && param_.debug_info());
     // accumulate the loss and gradient
     Dtype loss = 0;
+    
+    // std::cout << "iteration size = " << param_.iter_size() << std::endl; 
+    // caffe::Timer trainingIter; 
+    // double  trainIterTime= 0.0; 
+    // trainingIter.Start(); 
+
     for (int i = 0; i < param_.iter_size(); ++i) {
       loss += net_->ForwardBackward();
     }
+    // LOG(INFO) << "pre-loss-update";
     loss /= param_.iter_size();
     // average the loss across iterations for smoothed reporting
     UpdateSmoothedLoss(loss, start_iter, average_loss);
+    // LOG(INFO) << "post-loss-update";
+    
+    // trainIterTime += trainingIter.MicroSeconds(); 
+    // std::cout << "training iteration took = " << trainIterTime / 1000.0 << "ms" << std::endl; 
+    
+    // LOG(INFO) << "pre-display";
     if (display) {
       float lapse = iteration_timer_.Seconds();
       float per_s = (iter_ - iterations_last_) / (lapse ? lapse : 1);
@@ -261,6 +274,7 @@ void Solver<Dtype>::Step(int iters) {
         }
       }
     }
+    // LOG(INFO) << "post-display";
     for (int i = 0; i < callbacks_.size(); ++i) {
       callbacks_[i]->on_gradients_ready();
     }

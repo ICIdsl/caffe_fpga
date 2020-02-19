@@ -133,6 +133,7 @@ void SGDSolver<Dtype>::Normalize(int param_id) {
   const vector<Blob<Dtype>*>& net_params = this->net_->learnable_params();
   const Dtype accum_normalization = Dtype(1.) / this->param_.iter_size();
   switch (Caffe::mode()) {
+  case Caffe::FPGA:
   case Caffe::CPU: {
     caffe_scal(net_params[param_id]->count(), accum_normalization,
         net_params[param_id]->mutable_cpu_diff());
