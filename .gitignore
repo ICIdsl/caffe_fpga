@@ -109,3 +109,8 @@ huawei_proj.zip
 huawei_proj/*
 test*.txt
 src/caffe/util/math_functions_bkup.txt
+outdated/*
+Makefile.bkup
+src/caffe/fpga/*.txt
+source_fpga.sh
+*.xclbin

@@ -7,11 +7,10 @@ $(error $(CONFIG_FILE) not found. See $(CONFIG_FILE).example.)
 endif
 include $(CONFIG_FILE)
 
-COMMON_REPO = /home/centos/src/project_data/aws-fpga/SDAccel/examples/xilinx
+COMMON_REPO = /home/dav114/fpga/fpga_mm
 ABS_COMMON_REPO = $(shell readlink -f $(COMMON_REPO))
-include $(ABS_COMMON_REPO)/libs/opencl/opencl.mk
-include $(ABS_COMMON_REPO)/libs/opencv/opencv.mk
-include $(ABS_COMMON_REPO)/libs/xcl2/xcl2.mk
+include $(ABS_COMMON_REPO)/common/includes/opencl/opencl.mk
+include $(ABS_COMMON_REPO)/common/includes/xcl2/xcl2.mk
 
 BUILD_DIR_LINK := $(BUILD_DIR)
 ifeq ($(RELEASE_BUILD_DIR),)
@@ -169,21 +168,21 @@ NONEMPTY_WARN_REPORT := $(BUILD_DIR)/$(WARNS_EXT)
 ##############################
 # Derive include and lib directories
 ##############################
-CUDA_INCLUDE_DIR := $(CUDA_DIR)/include
-
-CUDA_LIB_DIR :=
-# add <cuda>/lib64 only if it exists
-ifneq ("$(wildcard $(CUDA_DIR)/lib64)","")
-	CUDA_LIB_DIR += $(CUDA_DIR)/lib64
-endif
-CUDA_LIB_DIR += $(CUDA_DIR)/lib
-
-INCLUDE_DIRS += $(BUILD_INCLUDE_DIR) ./src ./include
-ifneq ($(CPU_ONLY), 1)
-	INCLUDE_DIRS += $(CUDA_INCLUDE_DIR)
-	LIBRARY_DIRS += $(CUDA_LIB_DIR)
-	LIBRARIES := cudart cublas curand
-endif
+# CUDA_INCLUDE_DIR := $(CUDA_DIR)/include
+# 
+# CUDA_LIB_DIR :=
+# # add <cuda>/lib64 only if it exists
+# ifneq ("$(wildcard $(CUDA_DIR)/lib64)","")
+# 	CUDA_LIB_DIR += $(CUDA_DIR)/lib64
+# endif
+# CUDA_LIB_DIR += $(CUDA_DIR)/lib
+# 
+INCLUDE_DIRS += $(BUILD_INCLUDE_DIR) ./src /opt/xilinx/xrt/include /home/dav114/anaconda3/include /home/dav114/anaconda3/envs/cf2/lib/python3.8/site-packages/numpy/core/include ./include 
+# ifneq ($(CPU_ONLY), 1)
+# 	INCLUDE_DIRS += $(CUDA_INCLUDE_DIR)
+# 	LIBRARY_DIRS += $(CUDA_LIB_DIR)
+# 	LIBRARIES := cudart cublas curand
+# endif
 
 LIBRARIES += glog gflags protobuf boost_system boost_filesystem m
 
@@ -213,7 +212,7 @@ ifeq ($(USE_OPENCV), 1)
 
 endif
 # LIBRARIES += OpenCL rt pthread
-PYTHON_LIBRARIES ?= boost_python python2.7
+PYTHON_LIBRARIES ?= boost_python python3.8
 # WARNINGS := -w -Wall -Wno-sign-compare
 WARNINGS := -w -Wno-sign-compare
 
@@ -305,9 +304,15 @@ else ifeq ($(UNAME), Darwin)
 	OSX_MINOR_VERSION := $(shell sw_vers -productVersion | cut -f 2 -d .)
 endif
 
+# Custom compiler
+ifdef CUSTOM_CXX
+	CXX := $(CUSTOM_CXX)
+endif
+
 # Linux
 ifeq ($(LINUX), 1)
-	CXX ?= /usr/bin/g++
+	# CXX ?= /usr/bin/g++
+	CXX ?= /opt/rh/devtoolset-8/root/usr/bin/g++
 	GCCVERSION := $(shell $(CXX) -dumpversion | cut -f1,2 -d.)
 	# older versions of gcc are too dumb to build boost with -Wuninitalized
 	ifeq ($(shell echo | awk '{exit $(GCCVERSION) < 4.6;}'), 1)
@@ -317,6 +322,7 @@ ifeq ($(LINUX), 1)
 	# We will also explicitly add stdc++ to the link target.
 	LIBRARIES += boost_thread stdc++
 	VERSIONFLAGS += -Wl,-soname,$(DYNAMIC_VERSIONED_NAME_SHORT) -Wl,-rpath,$(ORIGIN)/../lib
+	# VERSIONFLAGS += -Wl,-soname,$(DYNAMIC_VERSIONED_NAME_SHORT) -Wl,-rpath,/opt/rh/devtoolset-8/root/usr/lib/gcc/x86)_64-redhat-linux/8
 endif
 
 # OS X:
@@ -350,11 +356,6 @@ ifeq ($(OSX), 1)
 	VERSIONFLAGS += -Wl,-install_name,@rpath/$(DYNAMIC_VERSIONED_NAME_SHORT) -Wl,-rpath,$(ORIGIN)/../../build/lib
 else
 	ORIGIN := \$$ORIGIN
-endif
-
-# Custom compiler
-ifdef CUSTOM_CXX
-	CXX := $(CUSTOM_CXX)
 endif
 
 # Static linking
@@ -473,7 +474,7 @@ CXXFLAGS += -MMD -MP
 # Complete build flags.
 COMMON_FLAGS += $(foreach includedir,$(INCLUDE_DIRS),-I$(includedir))
 COMMON_FLAGS += $(xcl2_CXXFLAGS) $(opencv_CXXFLAGS) $(opencl_CXXFLAGS)
-CXXFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS)
+CXXFLAGS += -pthread -fPIC $(COMMON_FLAGS) $(WARNINGS) --std=c++2a
 NVCCFLAGS += -ccbin=$(CXX) -Xcompiler -fPIC $(COMMON_FLAGS)
 # mex may invoke an older gcc that is too liberal with -Wuninitalized
 MATLAB_CXXFLAGS := $(CXXFLAGS) -Wno-uninitialized
@@ -487,7 +488,10 @@ endif
 LDFLAGS += $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) $(PKG_CONFIG) \
 		$(foreach library,$(LIBRARIES),-l$(library)) \
 		$(opencv_LDFLAGS) $(xcl2_LDFLAGS) $(opencl_LDFLAGS) \
-		-L$(XILINX_SDX)/runtime/lib/x86_64
+		-L$(XILINX_SDX)/runtime/lib/x86_64 \
+		-L/home/dav114/anaconda3/envs/cf2/lib \
+		# -L/home/dav114/anaconda3/pkgs/libprotobuf-3.11.4-h8b12597_0/include \
+		-L/home/dav114/anaconda3/envs/cf2/lib/python3.8/site-packages/numpy/core/include
 
 PYTHON_LDFLAGS := $(LDFLAGS) $(foreach library,$(PYTHON_LIBRARIES),-l$(library))
 

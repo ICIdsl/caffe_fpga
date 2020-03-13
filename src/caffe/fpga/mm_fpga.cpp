@@ -8,12 +8,15 @@ cl_int err;
 cl::Context context(device, NULL, NULL, NULL, &err);
 std::string deviceName = device.getInfo<CL_DEVICE_NAME>(&err);
 
-std::string binaryFile = xcl::find_binary_file(deviceName, "mesh_processor_16x16x64");
+unsigned fileBufSize; 
+char* fileBuf = xcl::read_binary_file("mesh_processor_16x16x64.xclbin", fileBufSize);
+cl::Program::Binaries bins{{fileBuf,fileBufSize}};
+// std::string binaryFile = xcl::find_binary_file(deviceName, "mesh_processor_16x16x64");
 // std::string binaryFile = xcl::find_binary_file(deviceName, "double_buff_16x16x64");
 // std::string binaryFile = xcl::find_binary_file(deviceName, "tiling_fpga_16x16x64");
 // std::string binaryFile = xcl::find_binary_file(deviceName, "double_ddr_16x16x64");
 
-cl::Program::Binaries bins = xcl::import_binary_file(binaryFile);
+// cl::Program::Binaries bins = xcl::import_binary_file(binaryFile);
 cl::Program program(context, std::vector<cl::Device>{device}, bins, NULL, &err);
 cl::Kernel krnl_mesh_proc(program, "matmul", &err);
 

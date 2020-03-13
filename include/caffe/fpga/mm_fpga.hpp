@@ -12,7 +12,7 @@
 
 #define TILE_ROW 16         // row size
 #define TILE_COL 16 	    // col size
-#define TILE_COMMON 64    // common dimension size
+#define TILE_COMMON 64      // common dimension size
 
 // #define TILE_ROW 4         // row size
 // #define TILE_COL 4 	    // col size

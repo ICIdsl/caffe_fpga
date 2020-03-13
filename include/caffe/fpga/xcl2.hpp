@@ -1,31 +1,19 @@
-/**********
-Copyright (c) 2018, Xilinx, Inc.
-All rights reserved.
+/*
+ * Copyright 2019 Xilinx Inc.
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *    http://www.apache.org/licenses/LICENSE-2.0
+ *
+ * Unless required by applicable law or agreed to in writing, software
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
+ */
 
-Redistribution and use in source and binary forms, with or without modification,
-are permitted provided that the following conditions are met:
-
-1. Redistributions of source code must retain the above copyright notice,
-this list of conditions and the following disclaimer.
-
-2. Redistributions in binary form must reproduce the above copyright notice,
-this list of conditions and the following disclaimer in the documentation
-and/or other materials provided with the distribution.
-
-3. Neither the name of the copyright holder nor the names of its contributors
-may be used to endorse or promote products derived from this software
-without specific prior written permission.
-
-THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND
-ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
-THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED.
-IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT,
-INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO,
-PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
-HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
-OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE,
-EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
-**********/
 
 
 #pragma once
@@ -48,7 +36,7 @@ EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <CL/cl2.hpp>
 #include <iostream>
 #include <fstream>
-
+#include "CL/cl_ext_xilinx.h"
 // When creating a buffer with user pointer (CL_MEM_USE_HOST_PTR), under the hood
 // User ptr is used if and only if it is properly aligned (page aligned). When not 
 // aligned, runtime has no choice but to create its own host side buffer that backs
@@ -76,44 +64,30 @@ struct aligned_allocator
 };
 
 namespace xcl {
-std::vector<cl::Device> get_xil_devices();
-std::vector<cl::Device> get_devices(const std::string& vendor_name);
-/* find_xclbin_file
- *
- *
- * Description:
- *   Find precompiled program (as commonly created by the Xilinx OpenCL
- *   flow). Using search path below.
- *
- *   Search Path:
- *      $XCL_BINDIR/<name>.<target>.<device>.xclbin
- *      $XCL_BINDIR/<name>.<target>.<device_versionless>.xclbin
- *      $XCL_BINDIR/binary_container_1.xclbin
- *      $XCL_BINDIR/<name>.xclbin
- *      xclbin/<name>.<target>.<device>.xclbin
- *      xclbin/<name>.<target>.<device_versionless>.xclbin
- *      xclbin/binary_container_1.xclbin
- *      xclbin/<name>.xclbin
- *      ../<name>.<target>.<device>.xclbin
- *      ../<name>.<target>.<device_versionless>.xclbin
- *      ../binary_container_1.xclbin
- *      ../<name>.xclbin
- *      ./<name>.<target>.<device>.xclbin
- *      ./<name>.<target>.<device_versionless>.xclbin
- *      ./binary_container_1.xclbin
- *      ./<name>.xclbin
- *
- * Inputs:
- *   _device_name - Targeted Device name
- *   xclbin_name - base name of the xclbin to import.
- *
- * Returns:
- *   An opencl program Binaries object that was created from xclbin_name file.
- */
-std::string find_binary_file(const std::string& _device_name, const std::string& xclbin_name);
-cl::Program::Binaries import_binary_file(std::string xclbin_file_name); 
-bool is_emulation () ;
-bool is_hw_emulation () ;
-bool is_xpr_device (const char *device_name);
-
+  std::vector<cl::Device> get_xil_devices();
+  std::vector<cl::Device> get_devices(const std::string& vendor_name);
+  char* read_binary_file(const std::string &xclbin_file_name, unsigned &nb);
+  bool is_emulation () ;
+  bool is_hw_emulation () ;
+  bool is_xpr_device (const char *device_name);
+    class Stream{
+      public:
+        static decltype(&clCreateStream) createStream;
+        static decltype(&clReleaseStream) releaseStream;
+        static decltype(&clReadStream) readStream;
+        static decltype(&clWriteStream) writeStream;
+        static decltype(&clPollStreams) pollStreams;
+        static void init(const cl_platform_id& platform) {
+            void *bar = clGetExtensionFunctionAddressForPlatform(platform, "clCreateStream");
+            createStream = (decltype(&clCreateStream))bar;
+            bar = clGetExtensionFunctionAddressForPlatform(platform, "clReleaseStream");
+            releaseStream = (decltype(&clReleaseStream))bar;
+            bar = clGetExtensionFunctionAddressForPlatform(platform, "clReadStream");
+            readStream = (decltype(&clReadStream))bar;
+            bar = clGetExtensionFunctionAddressForPlatform(platform, "clWriteStream");
+            writeStream = (decltype(&clWriteStream))bar;
+            bar = clGetExtensionFunctionAddressForPlatform(platform, "clPollStreams");
+            pollStreams = (decltype(&clPollStreams))bar;
+        }
+    };
 }
