@@ -114,3 +114,16 @@ Makefile.bkup
 src/caffe/fpga/*.txt
 source_fpga.sh
 *.xclbin
+!data/cifar10/*
+!data/cifar10/create_cifar10.sh
+!data/cifar10/get_cifar10.sh
+common/utility/*
+common/includes/bitmap/*
+common/includes/cmdparser/*
+common/includes/lodepng/*
+common/includes/logger/*
+common/includes/oclHelper/*
+common/includes/simplebmp/*
+!common/includes/xcl2/*
+!common/includes/utils/*
+!common/includes/opencl/*

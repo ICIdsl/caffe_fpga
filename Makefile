@@ -7,7 +7,7 @@ $(error $(CONFIG_FILE) not found. See $(CONFIG_FILE).example.)
 endif
 include $(CONFIG_FILE)
 
-COMMON_REPO = /home/dav114/fpga/fpga_mm
+COMMON_REPO = ../caffe_fpga
 ABS_COMMON_REPO = $(shell readlink -f $(COMMON_REPO))
 include $(ABS_COMMON_REPO)/common/includes/opencl/opencl.mk
 include $(ABS_COMMON_REPO)/common/includes/xcl2/xcl2.mk
@@ -177,7 +177,7 @@ NONEMPTY_WARN_REPORT := $(BUILD_DIR)/$(WARNS_EXT)
 # endif
 # CUDA_LIB_DIR += $(CUDA_DIR)/lib
 # 
-INCLUDE_DIRS += $(BUILD_INCLUDE_DIR) ./src /opt/xilinx/xrt/include /home/dav114/anaconda3/include /home/dav114/anaconda3/envs/cf2/lib/python3.8/site-packages/numpy/core/include ./include 
+INCLUDE_DIRS += $(BUILD_INCLUDE_DIR) ./src /opt/xilinx/xrt/include ./include 
 # ifneq ($(CPU_ONLY), 1)
 # 	INCLUDE_DIRS += $(CUDA_INCLUDE_DIR)
 # 	LIBRARY_DIRS += $(CUDA_LIB_DIR)
@@ -489,9 +489,7 @@ LDFLAGS += $(foreach librarydir,$(LIBRARY_DIRS),-L$(librarydir)) $(PKG_CONFIG) \
 		$(foreach library,$(LIBRARIES),-l$(library)) \
 		$(opencv_LDFLAGS) $(xcl2_LDFLAGS) $(opencl_LDFLAGS) \
 		-L$(XILINX_SDX)/runtime/lib/x86_64 \
-		-L/home/dav114/anaconda3/envs/cf2/lib \
-		# -L/home/dav114/anaconda3/pkgs/libprotobuf-3.11.4-h8b12597_0/include \
-		-L/home/dav114/anaconda3/envs/cf2/lib/python3.8/site-packages/numpy/core/include
+		-L$(ANACONDA_HOME)/lib \
 
 PYTHON_LDFLAGS := $(LDFLAGS) $(foreach library,$(PYTHON_LIBRARIES),-l$(library))
 
