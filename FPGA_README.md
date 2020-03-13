@@ -5,7 +5,7 @@ Setup anaconda from file provided
 
 Step ) 
 Fix Makefile:
-Setup ANACONDA_HOME directory in Makefile, otherwise nothign else works
+Setup ANACONDA_HOME directory in Makefile
 
 Step )
 make clean
@@ -13,10 +13,10 @@ make all -j8
 make distribute -j8
 
 Step )
-./data/get_cifar10.sh
-source <...>/xilinx/xrt/
+./data/cifar10/get_cifar10.sh
+source <...>/xilinx/xrt/setup.sh
 paste xclbin in caffe_fpga/
-./data/create_cifar10.sh
+./data/cifar10/create_cifar10.sh
 
 Step )
 mkdir -p checkpoints/bvlc_alexnet/fpga

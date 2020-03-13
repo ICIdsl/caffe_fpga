@@ -127,3 +127,4 @@ common/includes/simplebmp/*
 !common/includes/xcl2/*
 !common/includes/utils/*
 !common/includes/opencl/*
+!models/bvlc_alexnet
