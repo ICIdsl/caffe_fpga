@@ -1,8 +1,13 @@
 # Caffe with FACTS implementation
 ## Overview
 This is an overview of the implementation of Caffe with FACTS, the implementation of the work described in the corresponding paper.
-The tool works exactly like standard caffe, except for the fact that it now also accepts FPGA as a parameter for the solver_mode.
+It is a systolic array implementation with all batching and im2col operations being left on the CPU and handled by Caffe.
+The tool works exactly like standard Caffe, except for the fact that it now also accepts FPGA as a parameter for the solver_mode.
+This was done to ensure exisiting networks could be run using this tool with minimal changes required.
 This version of caffe can be downloaded and directly run, requiring only to follow the steps in the Installation Procedure section.
+
+This tool has only been tested on Xilinx FPGAs, and all OpenCL calls follow the Xilinx OpenCL call extensions.
+It also requires the user to have a functioning installation of Anaconda3 or Miniconda3.
 
 ## Implementation Details
 All files defined here have an equivalent header file in the *include/caffe/...* directories.
