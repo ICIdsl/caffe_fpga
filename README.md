@@ -48,7 +48,7 @@ make distribute -j8
 
 source <...>/xilinx/xrt/setup.sh
 
-paste xclbin in caffe_fpga/
+paste xclbin from https://github.com/ICIdsl/fpga_mm in caffe_fpga/
 
 ./data/cifar10/create_cifar10.sh
 
