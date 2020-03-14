@@ -78,7 +78,6 @@ template <typename Dtype>
 void ConvolutionLayer<Dtype>::Forward_fpga(const vector<Blob<Dtype>*>& bottom,
       const vector<Blob<Dtype>*>& top) {
   const Dtype* weight = this->blobs_[0]->cpu_data();
-  // std::cout << "size_forward: (" << this->blobs_[0]->shape(0) /*<< "," << layers_[i]->blobs()[0]->shape(1) << "," << layers_[i]->blobs()[0]->shape(2)*/ << ")" << std::endl; 
   for (int i = 0; i < bottom.size(); ++i) {
     const Dtype* bottom_data = bottom[i]->cpu_data();
     Dtype* top_data = top[i]->mutable_cpu_data();
