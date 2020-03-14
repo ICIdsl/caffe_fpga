@@ -6,7 +6,7 @@ The tool works exactly like standard Caffe, except for the fact that it now also
 This was done to ensure exisiting networks could be run using this tool with minimal changes required.
 This version of caffe can be downloaded and directly run, requiring only to follow the steps in the Installation Procedure section.
 
-This tool has only been tested on Xilinx FPGAs, and all OpenCL calls follow the Xilinx OpenCL call extensions.
+This tool has only been tested on Xilinx FPGAs, and all OpenCL calls follow the Xilinx OpenCL extension.
 It also requires the user to have a functioning installation of Anaconda3 or Miniconda3.
 
 ## Implementation Details
