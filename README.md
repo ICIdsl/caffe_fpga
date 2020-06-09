@@ -53,7 +53,7 @@ make distribute -j8
 
 source <...>/xilinx/xrt/setup.sh
 
-paste xclbin from https://imperialcollegelondon.box.com/s/ubjxfx739htpxroqv44ed82qa2oi2mtc in caffe_fpga/
+paste xclbin from https://imperialcollegelondon.box.com/s/ubjxfx739htpxroqv44ed82qa2oi2mtc (or your own) in caffe_fpga/
 
 ./data/cifar10/create_cifar10.sh
 
