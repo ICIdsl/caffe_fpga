@@ -1,6 +1,6 @@
-# Caffe with FACTS implementation
+# Caffe Barista implementation
 ## Overview
-This is an overview of the implementation of Caffe with FACTS, the implementation of the work described in the corresponding paper.
+This is an overview of the implementation of Caffe Barista, the implementation of the work described in the corresponding paper.
 It is a systolic array implementation with all batching and im2col operations being left on the CPU and handled by Caffe.
 The tool works exactly like standard Caffe, except for the fact that it now also accepts FPGA as a parameter for the solver_mode.
 This was done to ensure exisiting networks could be run using this tool with minimal changes required.
