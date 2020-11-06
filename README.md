@@ -1,7 +1,20 @@
-# Caffe Barista implementation
+# Caffe Barista 
 ## Overview
-This is an overview of the implementation of Caffe Barista, the implementation of the work described in the corresponding paper.
-It is a systolic array implementation with all batching and im2col operations being left on the CPU and handled by Caffe.
+This is an open-source implementation of the work presented in the paper "Caffe Barista: Brewing Caffe with FPGAs in the Training Loop" that was published as a short paper in FPL2020. 
+If you reference this work in a publication, we would appreciate you using the following citation: 
+```
+@misc{vink2020caffe,
+      title={Caffe Barista: Brewing Caffe with FPGAs in the Training Loop}, 
+      author={Diederik Adriaan Vink and Aditya Rajagopal and Stylianos I. Venieris and Christos-Savvas Bouganis},
+      year={2020},
+      eprint={2006.13829},
+      archivePrefix={arXiv},
+      primaryClass={cs.DC}
+}
+```
+Checkout https://www.imperial.ac.uk/intelligent-digital-systems to see other publications by the Intelligent Digital Systems Lab at Imperial College London.
+
+The implementation involes a systolic array with all batching and im2col operations being left on the CPU and handled by Caffe.
 The tool works exactly like standard Caffe, except for the fact that it now also accepts FPGA as a parameter for the solver_mode.
 This was done to ensure exisiting networks could be run using this tool with minimal changes required.
 This version of caffe can be downloaded and directly run, requiring only to follow the steps in the Installation Procedure section.
